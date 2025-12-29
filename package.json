@@ -26,7 +26,8 @@
     "@maplibre/vt-pbf": "^4.1.0",
     "fflate": "^0.8.2",
     "maplibre-local-glyphs": "^1.2.0",
-    "pbf": "^3.2.1"
+    "pbf": "^3.2.1",
+    "pmtiles": "^4.3.2"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^26.0.3",

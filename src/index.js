@@ -1,5 +1,7 @@
 export * from "./maplibre-gl-js-protocol.js";
 export * from "./source.js";
+
+import { PMTiles } from "pmtiles";
 import { FetchSource } from "./source.js";
 import defaultDecompress from "./default-decompress.js";
 import getJsonFromFile from "./get-json-from-file.js";
@@ -36,44 +38,38 @@ export class PMX {
       options && options.decompress ? options.decompress : defaultDecompress;
     this.cache =
       options && options.cache ? options.cache : new SharedPromiseCache();
+    this.pmtiles = {};
   }
 
   async getFilelist() {
     return await this.cache.getFilelist(this.source);
   }
-  /*
-  async getMetadataAttempt() {
-    const header = await this.cache.getFilelist(this.source);
-    let metadata = {};
-    if (header.packageType === "vtpk") {
-      const resp = await this.source.getBytes(
-        header.jsonMetadataOffset,
-        header.jsonMetadataLength,
-        undefined,
-        header.etag,
-      );
-      const decoder = new TextDecoder("utf-8");
-      metadata = JSON.parse(decoder.decode(resp.data));
+
+  async getPmtilesInstance(file) {
+    if (!this.pmtiles[file]) {
+      const fileList = await this.getFilelist();
+      const fileOffset = fileList[file].absoluteOffset;
+      const source = this.source.clone(fileOffset); // Clone to allow different fileOffsets
+      this.pmtiles[file] = new PMTiles(source);
     }
-    metadata.name = header.name;
-    return metadata;
+    return this.pmtiles[file];
   }
 
-  async getMetadata() {
-    try {
-      return await this.getMetadataAttempt();
-    } catch (e) {
-      if (e instanceof EtagMismatch) {
-        this.cache.invalidate(this.source);
-        return await this.getMetadataAttempt();
-      }
-      throw e;
-    }
-  }
-  //*/
   async getResourceAttempt(file, signal) {
     const filelist = await this.cache.getFilelist(this.source);
-    if (!filelist[file]) return undefined;
+    if (file.indexOf(",") !== -1) {
+      // Support for multiple files separated by comma (e.g. tilejson + data)
+      const files = file.split("/");
+      for (const f in files) {
+        files[f] = files[f].split(",")[0];
+      }
+      file = files.join("/");
+    }
+    if (!filelist[file]) {
+      console.log(`File ${file} not found in PMX package`);
+      return undefined;
+    }
+
     const resource = await this.cache.getResource(
       this.source,
       file,
@@ -99,6 +95,10 @@ export class PMX {
     }
   }
 
+  getSource() {
+    return this.source;
+  }
+
   async getStylesAttempt() {
     const filelist = await this.cache.getFilelist(this.source);
     const sourceKey = this.source.getKey();
@@ -109,6 +109,13 @@ export class PMX {
         try {
           const style = await getJsonFromFile(file, filelist, this.source);
           // TODO Rewrite any URLs in the style
+          style.sources = {
+            composite: {
+              type: "vector",
+              url: `pmx://${sourceKey}/data/OS_Open_Zoomstack.pmtiles/tiles.json`,
+            },
+          };
+
           style.glyphs = `pmx://${sourceKey}/fonts/{fontstack}/{range}.pbf`;
           style.sprite = `pmx://${sourceKey}/sprites/sprites`;
           styles.push(style);

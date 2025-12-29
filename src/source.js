@@ -24,6 +24,14 @@ export class FileSource extends Source {
     if (options && options.coverageCheck) {
       this.coverageCheck = options.coverageCheck;
     }
+    this.fileOffset = options && options.fileOffset ? options.fileOffset : 0;
+  }
+
+  clone(fileOffset) {
+    return new FileSource(this.file, {
+      coverageCheck: this.coverageCheck,
+      fileOffset: fileOffset,
+    });
   }
 
   getKey() {
@@ -36,7 +44,10 @@ export class FileSource extends Source {
 
   // eslint-disable-next-line no-unused-vars
   async getBytes(offset, length, passedSignal, etag) {
-    const blob = this.file.slice(offset, offset + length);
+    const blob = this.file.slice(
+      this.fileOffset + offset,
+      this.fileOffset + offset + length,
+    );
     const a = await blob.arrayBuffer();
     return { data: a };
   }
@@ -78,6 +89,14 @@ export class FetchSource extends Source {
     if (options && options.coverageCheck) {
       this.coverageCheck = options.coverageCheck;
     }
+    this.fileOffset = options && options.fileOffset ? options.fileOffset : 0;
+  }
+
+  clone(fileOffset) {
+    return new FetchSource(this.url, {
+      coverageCheck: this.coverageCheck,
+      fileOffset: fileOffset,
+    });
   }
 
   getKey() {
@@ -160,7 +179,12 @@ export class FetchSource extends Source {
     }
 
     const requestHeaders = new Headers(this.customHeaders);
-    requestHeaders.set("range", `bytes=${offset}-${offset + length - 1}`);
+    requestHeaders.set(
+      "range",
+      `bytes=${this.fileOffset + offset}-${
+        this.fileOffset + offset + length - 1
+      }`,
+    );
 
     let cache;
     if (this.mustReload) {

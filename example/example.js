@@ -51,7 +51,7 @@
     currentMap = new maplibregl.Map({
       container: "map-element",
       localIdeographFontFamily: false,
-      style: styles[0],
+      style: styles[3],
     });
   }
 
@@ -138,7 +138,7 @@
         }
       });
     }
-    // Auto-load demo vtpk when served via http/https (not file://)
+    // Auto-load demo pmx when served via http/https (not file://)
     if (location.protocol !== "file:") {
       const demoName = "os-zoomstack.pmx"; // present in example folder
       // Use relative path so it works regardless of host/port

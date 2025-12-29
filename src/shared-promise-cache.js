@@ -7,7 +7,7 @@ async function getResource(source, file, filelist, signal) {
     signal,
     filelist.etag,
   );
-  console.log("got file and returns:", file);
+  //console.log("got file and returns:", file);
   return resp;
 }
 

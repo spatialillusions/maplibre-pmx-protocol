@@ -1,12 +1,4 @@
 import { PMX } from "./index.js";
-import protocolGlyphs from "maplibre-local-glyphs";
-
-function stringEndsIn(string, endings) {
-  for (let i = 0; i < endings.length; i++) {
-    if (string.slice(-endings[i].length) == endings[i]) return endings[i];
-  }
-  return false;
-}
 
 const converter = (getData) => (requestParameters, arg2) => {
   if (arg2 instanceof AbortController) {
@@ -71,7 +63,39 @@ export class Protocol {
       if (!result) {
         const file = params.url.substr(params.url.indexOf(".pmx") + 5);
         //console.log("PMX non-tile file request:", file, params.type);
-        // This is not a tile request
+        if (params.type === "json" && params.url.endsWith("tiles.json")) {
+          // This is probably a file json request
+          console.log(
+            "PMX tiles.json request for file:",
+            file.replace("/tiles.json", ""),
+          );
+          const pmtiles = await instance.getPmtilesInstance(
+            file.replace("/tiles.json", ""),
+          );
+
+          const h = await pmtiles.getHeader();
+          abortController.signal.throwIfAborted();
+
+          if (h.minLon >= h.maxLon || h.minLat >= h.maxLat) {
+            console.error(
+              `Bounds of PMTiles archive ${h.minLon},${h.minLat},${h.maxLon},${h.maxLat} are not valid.`,
+            );
+          }
+          return {
+            data: {
+              tiles: [
+                `${params.url.substr(
+                  0,
+                  params.url.indexOf(".pmtiles") + 8,
+                )}/{z}/{x}/{y}`,
+              ],
+              minzoom: h.minZoom,
+              maxzoom: h.maxZoom,
+              bounds: [h.minLon, h.minLat, h.maxLon, h.maxLat],
+            },
+          };
+          //*/
+        }
         if (params.type === "json") {
           const resp = await instance.getResource(file, abortController.signal);
           if (resp) {
@@ -97,8 +121,9 @@ export class Protocol {
       const x = result[3];
       const y = result[4];
 
-      const header = await instance.getFilelist();
-      const resp = await instance.getZxy(+z, +x, +y, abortController.signal);
+      const file = result[1].substr(result[1].indexOf(".pmx") + 5);
+      const pmtiles = await instance.getPmtilesInstance(file);
+      const resp = await pmtiles.getZxy(+z, +x, +y, abortController.signal);
       if (this.debug)
         console.debug("[] tile fetch", {
           z: +z,
@@ -114,6 +139,7 @@ export class Protocol {
         };
       }
       /*
+      // TODO handle missing tiles ... 
       if (header.tileType === "pbf") {
         if (this.errorOnMissingTile) {
           //*
