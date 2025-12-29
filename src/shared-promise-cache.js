@@ -1,75 +1,18 @@
 import getFilelistFromPMX from "./get-filelist.js";
 
-function deserializeIndex(dataView) {
-  const index = [];
-
-  //const M = BigInt(Math.pow(2, 40));
-  for (let row = 0; row < 128; row++) {
-    index[row] = [];
-    for (let col = 0; col < 128; col++) {
-      const tileIndexOffset = 8 * (128 * (row % 128) + (col % 128));
-      // eslint-disable-next-line no-undef
-      let tileOffset = BigInt(0);
-      for (let i = 4; i >= 0; i--) {
-        // Start from the last byte for little-endian
-        tileOffset =
-          // eslint-disable-next-line no-undef
-          (tileOffset << BigInt(8)) |
-          // eslint-disable-next-line no-undef
-          BigInt(dataView.getUint8(tileIndexOffset + i));
-      }
-      // eslint-disable-next-line no-undef
-      let tileSize = BigInt(0);
-      for (let i = 2; i >= 0; i--) {
-        // Start from the last byte for little-endian
-        tileSize =
-          // eslint-disable-next-line no-undef
-          (tileSize << BigInt(8)) |
-          // eslint-disable-next-line no-undef
-          BigInt(dataView.getUint8(tileIndexOffset + 5 + i));
-      }
-      if (tileSize > 0) {
-        index[row][col] = {
-          row: row,
-          col: col,
-          tileOffset: Number(tileOffset),
-          tileSize: Number(tileSize),
-        };
-      }
-    }
-  }
-
-  return index;
-}
-
-async function getResource(source, file, header, signal) {
+async function getResource(source, file, filelist, signal) {
   const resp = await source.getBytes(
-    header.files[file].absoluteOffset,
-    header.files[file].size,
+    filelist[file].absoluteOffset,
+    filelist[file].size,
     signal,
-    header.etag,
+    filelist.etag,
   );
+  console.log("got file and returns:", file);
   return resp;
 }
 
-async function getTileIndex(source, file, header, signal) {
-  const offset = header.files[file].absoluteOffset + 64; // File header 64bytes
-  const resp = await source.getBytes(
-    offset,
-    128 * 128 * 8,
-    signal,
-    header.etag,
-  );
-  const dataView = new DataView(resp.data, 0, 128 * 128 * 8);
-  const directory = deserializeIndex(dataView);
-  if (directory.length === 0) {
-    throw new Error("Empty directory is invalid");
-  }
-  return directory;
-}
-
 /**
- * A cache for parts of a TilePackage archive where promises can be shared between requests.
+ * A cache for parts of a PMX archive where promises can be shared between requests.
  *
  * Only caches headers, resource files, and directories, not individual tile contents.
  */
@@ -114,7 +57,7 @@ export default class SharedPromiseCache {
   }
 
   async getResource(source, file, header, signal) {
-    const cacheKey = `${source.getKey()}|${header.etag || ""}|${file}|Resource`;
+    const cacheKey = `${source.getKey()}|${""}|${file}|Resource`;
     const cacheValue = this.cache.get(cacheKey);
     if (cacheValue) {
       cacheValue.lastUsed = this.counter++;

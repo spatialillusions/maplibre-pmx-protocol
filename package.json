@@ -1,14 +1,14 @@
 {
-  "name": "maplibre-tilepackage-protocol",
+  "name": "maplibre-pmx-protocol",
   "version": "1.2.0",
   "description": "Maplibre-gl-js protocol for reading VTPK and TPKX files",
-  "homepage": "https://github.com/spatialillusions/maplibre-tilepackage-protocol#readme",
+  "homepage": "https://github.com/spatialillusions/maplibre-pmx-protocol#readme",
   "bugs": {
-    "url": "https://github.com/spatialillusions/maplibre-tilepackage-protocol/issues"
+    "url": "https://github.com/spatialillusions/maplibre-pmx-protocol/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/spatialillusions/maplibre-tilepackage-protocol.git"
+    "url": "git+https://github.com/spatialillusions/maplibre-pmx-protocol.git"
   },
   "license": "MIT",
   "author": "Måns Beckman",

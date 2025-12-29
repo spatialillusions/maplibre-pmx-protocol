@@ -51,30 +51,26 @@
       >
         <div>
           <label
-            for="tilepackage-input"
+            for="pmx-input"
             style="display: block; font-weight: 600; margin-bottom: 4px"
             >Local file</label
           >
-          <input id="tilepackage-input" type="file" accept=".pmx, .zip" />
+          <input id="pmx-input" type="file" accept=".pmx, .zip" />
         </div>
         <div style="flex: 1; min-width: 280px">
           <label
-            for="tilepackage-url"
+            for="pmx-url"
             style="display: block; font-weight: 600; margin-bottom: 4px"
             >Remote URL</label
           >
           <div style="display: flex; gap: 8px">
             <input
-              id="tilepackage-url"
+              id="pmx-url"
               type="text"
               placeholder="https://example.com/data/package.vtpk"
               style="flex: 1; padding: 4px 6px"
             />
-            <button
-              id="tilepackage-load-url"
-              type="button"
-              style="padding: 4px 10px"
-            >
+            <button id="pmx-load-url" type="button" style="padding: 4px 10px">
               Load URL
             </button>
           </div>
@@ -88,7 +84,7 @@
       rel="stylesheet"
     />
     <script src="https://unpkg.com/maplibre-gl@5.13.0/dist/maplibre-gl.js"></script>
-    <!-- Bundled IIFE providing TilePackageProtocol global -->
+    <!-- Bundled IIFE providing pmxProtocol global -->
     <script src="../dist/bundle.js"></script>
     <script src="./example.js"></script>
   </body>

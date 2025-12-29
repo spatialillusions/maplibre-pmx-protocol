@@ -8,16 +8,16 @@
     );
     return;
   }
-  const { TilePackage, FileSource, Protocol } = window.pmxProtocol;
+  const { PMX, FileSource, Protocol } = window.pmxProtocol;
   let currentMap = null;
   let protocolInstance = null;
 
   async function initMap(pkg) {
     const fileList = await pkg.getFilelist();
-    console.log("TilePackage header:", fileList);
+    console.log("PMX file list:", fileList);
 
     const styles = await pkg.getStyles();
-    console.log("TilePackage styles:", styles);
+    console.log("PMX styles:", styles);
 
     if (!protocolInstance) {
       protocolInstance = new Protocol({
@@ -26,15 +26,15 @@
         debug: true,
       });
       console.debug("[example] Protocol initialized (debug:true)");
-      // Critical: register existing TilePackage instance so protocol doesn't create FetchSource (causing file:/// fetch)
+      // Critical: register existing PMX instance so protocol doesn't create FetchSource (causing file:/// fetch)
       protocolInstance.add(pkg);
       console.debug(
-        "[example] TilePackage instance added to protocol with key",
+        "[example] PMX instance added to protocol with key",
         pkg.source.getKey(),
       );
       if (window.maplibregl && maplibregl.addProtocol) {
-        maplibregl.addProtocol("tilepackage", protocolInstance.package);
-        console.debug("[example] Protocol registered with maplibregl");
+        maplibregl.addProtocol("pmx", protocolInstance.package);
+        console.debug("[example] pmx:// protocol registered with maplibregl");
       } else {
         console.warn("[example] maplibregl.addProtocol unavailable");
       }
@@ -51,7 +51,7 @@
     currentMap = new maplibregl.Map({
       container: "map-element",
       localIdeographFontFamily: false,
-      style: style,
+      style: styles[0],
     });
   }
 
@@ -60,8 +60,8 @@
     try {
       const fileSource = new FileSource(file);
       console.log("FileSource:", fileSource);
-      const pkg = new TilePackage(fileSource);
-      console.log("TilePackage:", pkg);
+      const pkg = new PMX(fileSource);
+      console.log("PMX:", pkg);
       initMap(pkg);
     } catch (err) {
       console.error("Failed to initialize map from file", err);
@@ -101,14 +101,14 @@
   async function initWithUrl(url) {
     const clean = sanitizeUrl(url);
     if (!clean) return;
-    console.log("Loading remote TilePackage URL:", clean);
+    console.log("Loading remote PMX URL:", clean);
     try {
-      const pkg = new TilePackage(clean);
-      console.log("TilePackage (remote):", pkg);
+      const pkg = new PMX(clean);
+      console.log("PMX (remote):", pkg);
       // Await map initialization so we only reflect URL on success
       await initMap(pkg);
       // If URL input exists and is empty, show the URL used for initialization
-      const urlInput = document.getElementById("tilepackage-url");
+      const urlInput = document.getElementById("pmx-url");
       if (urlInput && !urlInput.value) {
         urlInput.value = clean;
       }
@@ -121,15 +121,15 @@
   }
 
   window.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("tilepackage-input");
+    const input = document.getElementById("pmx-input");
     if (input) {
       input.addEventListener("change", (e) => {
         const file = e.target.files && e.target.files[0];
         if (file) initWithFile(file);
       });
     }
-    const urlInput = document.getElementById("tilepackage-url");
-    const urlButton = document.getElementById("tilepackage-load-url");
+    const urlInput = document.getElementById("pmx-url");
+    const urlButton = document.getElementById("pmx-load-url");
     if (urlButton && urlInput) {
       urlButton.addEventListener("click", () => initWithUrl(urlInput.value));
       urlInput.addEventListener("keydown", (e) => {

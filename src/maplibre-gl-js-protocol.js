@@ -1,4 +1,4 @@
-import { TilePackage } from "./index.js";
+import { PMX } from "./index.js";
 import protocolGlyphs from "maplibre-local-glyphs";
 
 function stringEndsIn(string, endings) {
@@ -38,9 +38,9 @@ const converter = (getData) => (requestParameters, arg2) => {
  */
 export class Protocol {
   /**
-   * Initialize the MapLibre TilePackage protocol.
+   * Initialize the MapLibre PMX protocol.
    *
-   * * metadata: also load the metadata section of the TilePackage. required for some "inspect" functionality
+   * * metadata: also load the metadata section of the PMX. required for some "inspect" functionality
    * and to automatically populate the map attribution. Requires an extra HTTP request.
    * * errorOnMissingTile: When a vector MVT tile is missing from the archive, raise an error instead of
    * returning the empty array. Not recommended. This is only to reproduce the behavior of ZXY tile APIs
@@ -54,33 +54,25 @@ export class Protocol {
       : false;
     this.debug = options ? options.debug || false : false;
     this.getData = async (params, abortController) => {
-      if (params.type === "json") {
-        let tilePackageUrl = params.url.substr(14); // TODO fix this to be more robust
-        // at the moment we depend on that the tilePackage URL starts with tilepackage://
+      const pmxUrl = params.url
+        .substr(params.url.indexOf("://") + 3, params.url.indexOf(".pmx") - 2)
+        .replace(/(https?)\/\/?/g, "$1://");
+      //console.log("PMX URL:", pmxUrl);
+      let instance = this.tiles.get(pmxUrl);
+      if (!instance) {
+        instance = new PMX(pmxUrl);
+        this.tiles.set(pmxUrl, instance);
+      }
 
-        let spriteCheck = stringEndsIn(params.url, [
-          "/sprite",
-          "/sprite.json",
-          "/sprite@2x.json",
-        ]);
-        if (spriteCheck) {
-          // For some reason spirit and glyphs urls might loose the : in http://
-          tilePackageUrl = tilePackageUrl.replace(/(https?)\/\/?/g, "$1://");
-          tilePackageUrl = tilePackageUrl.slice(0, -spriteCheck.length);
-          if (spriteCheck == "/sprite") {
-            spriteCheck = "/sprite.json";
-          }
-        }
+      // Check if the url ends in numbers so that it is a tile request
+      let re = new RegExp(/pmx:\/\/(.+)\/(\d+)\/(\d+)\/(\d+)/);
+      let result = params.url.match(re);
 
-        let instance = this.tiles.get(tilePackageUrl);
-        if (!instance) {
-          instance = new TilePackage(tilePackageUrl);
-          this.tiles.set(tilePackageUrl, instance);
-        }
-
-        if (spriteCheck) {
-          // This is a request for a sprite json
-          const file = `p12/resources/sprites${spriteCheck}`;
+      if (!result) {
+        const file = params.url.substr(params.url.indexOf(".pmx") + 5);
+        //console.log("PMX non-tile file request:", file, params.type);
+        // This is not a tile request
+        if (params.type === "json") {
           const resp = await instance.getResource(file, abortController.signal);
           if (resp) {
             const decoder = new TextDecoder("utf-8");
@@ -90,118 +82,25 @@ export class Protocol {
             };
           }
         }
-        // This is a request for a tile json
-        if (this.metadata) {
-          const tj = await instance.getTileJson(params.url);
-          if (this.debug)
-            console.debug("[tilepackage] tilejson (metadata)", tj);
-          return { data: tj };
-        }
-        const h = await instance.getFilelist();
-        if (h.minLon >= h.maxLon || h.minLat >= h.maxLat) {
-          console.error(
-            `Bounds of TilePackage archive ${h.minLon},${h.minLat},${h.maxLon},${h.maxLat} are not valid.`,
-          );
-        }
-
-        const synthesized = {
-          tiles: [`${params.url}/{z}/{x}/{y}`],
-          minzoom: h.minZoom,
-          maxzoom: h.maxZoom,
-          bounds: [h.minLon, h.minLat, h.maxLon, h.maxLat],
-        };
-        if (this.debug)
-          console.debug("[tilepackage] tilejson (synthesized)", synthesized);
-        return { data: synthesized };
-        //}
-      }
-      // TODO handle other paths ???
-      let re = new RegExp(/tilepackage:\/\/(.+)\/(\d+)\/(\d+)\/(\d+)/);
-      let result = params.url.match(re);
-      if (!result) {
-        // This might be a request for glyphs or spirit
-        let tilePackageUrl = params.url.substr(14);
-        // For some reason spirit and glyphs urls might loose the : in http://
-        tilePackageUrl = tilePackageUrl.replace(/(https?)\/\/?/g, "$1://");
-        let spriteCheck = stringEndsIn(params.url, [
-          "/sprite",
-          "/sprite.png",
-          "/sprite@2x.png",
-        ]);
-        if (spriteCheck) {
-          // It looks like we are looking for a spirit png
-          tilePackageUrl = tilePackageUrl.slice(0, -spriteCheck.length);
-          if (spriteCheck == "/sprite") {
-            spriteCheck = "/sprite.png";
-          }
-          let instance = this.tiles.get(tilePackageUrl);
-          if (!instance) {
-            instance = new TilePackage(tilePackageUrl);
-            this.tiles.set(tilePackageUrl, instance);
-          }
-          const file = `p12/resources/sprites${spriteCheck}`;
-          const resp = await instance.getResource(file, abortController.signal);
-          if (resp) {
-            return {
-              data: new Uint8Array(resp.data),
-              cacheControl: resp.cacheControl,
-              expires: resp.expires,
-            };
-          }
-        } else {
-          // This is more likely a glyph url
-          re = new RegExp(/^tilepackage:\/\/(.+?)\/([^/]+)\/([^/]+)$/);
-          result = params.url.match(re);
-          if (result && isNaN(result[2])) {
-            const tilePackageUrl = result[1];
-            let instance = this.tiles.get(tilePackageUrl);
-            if (!instance) {
-              instance = new TilePackage(tilePackageUrl);
-              this.tiles.set(tilePackageUrl, instance);
-            }
-            const file = `p12/resources/fonts/${result[2]}/${result[3]}.pbf`;
-            const resp = await instance.getResource(
-              file,
-              abortController.signal,
-            );
-            if (resp) {
-              return {
-                data: new Uint8Array(resp.data),
-                cacheControl: resp.cacheControl,
-                expires: resp.expires,
-              };
-            }
-
-            // Fallback to local glyphs since we couldn't load the coorect from the vtpk
-            const fallback = await protocolGlyphs({
-              url: `glyphs://${result[2]}/${result[3]}`,
-            });
-            if (fallback) {
-              return fallback;
-            }
-
-            return { data: null };
-          }
+        // This is another non-tile request, return the file directly
+        const resp = await instance.getResource(file, abortController.signal);
+        if (resp) {
+          return {
+            data: new Uint8Array(resp.data),
+            cacheControl: resp.cacheControl,
+            expires: resp.expires,
+          };
         }
       }
-
-      if (!result) {
-        throw new Error("Invalid TilePackage protocol URL");
-      }
-      const tilePackageUrl = result[1];
-
-      let instance = this.tiles.get(tilePackageUrl);
-      if (!instance) {
-        instance = new TilePackage(tilePackageUrl);
-        this.tiles.set(tilePackageUrl, instance);
-      }
+      // Parse z/x/y from the URL
       const z = result[2];
       const x = result[3];
       const y = result[4];
+
       const header = await instance.getFilelist();
       const resp = await instance.getZxy(+z, +x, +y, abortController.signal);
       if (this.debug)
-        console.debug("[tilepackage] tile fetch", {
+        console.debug("[] tile fetch", {
           z: +z,
           x: +x,
           y: +y,
@@ -214,43 +113,44 @@ export class Protocol {
           expires: resp.expires,
         };
       }
+      /*
       if (header.tileType === "pbf") {
         if (this.errorOnMissingTile) {
           //*
           const e = new Error(
-            `Tile [${z},${x},${y}] not found in Tile Package, normal for VTPK with variable depth.`,
+            `Tile [${z},${x},${y}] not found in Tile Package, normal for with variable depth pyramids.`,
           );
           e.name = "TileError";
           if (this.debug)
-            console.debug("[tilepackage] missing tile", { z, x, y });
+            console.debug("[pmx] missing tile", { z, x, y });
           throw e;
         }
         return { data: new Uint8Array() };
       } else {
         return { data: null };
       }
+      //*/
     };
 
     this.package = converter(this.getData);
   }
 
   /**
-   * Add a {@link TilePackage} instance to the global protocol instance.
+   * Add a {@link PMX} instance to the global protocol instance.
    *
-   * For remote fetch sources, references in MapLibre styles like tilePackage://http://...
+   * For remote fetch sources, references in MapLibre styles like pmx://http://...
    * will resolve to the same instance if the URLs match.
    */
   add(p) {
     this.tiles.set(p.source.getKey(), p);
-    if (this.debug)
-      console.debug("[tilepackage] add instance", p.source.getKey());
+    if (this.debug) console.debug("[pmx] add instance", p.source.getKey());
   }
 
   /**
-   * Fetch a {@link TilePackage} instance by URL, for remote TilePackage instances.
+   * Fetch a {@link PMX} instance by URL, for remote PMX instances.
    */
   get(url) {
-    if (this.debug) console.debug("[tilepackage] get instance", url);
+    if (this.debug) console.debug("[pmx] get instance", url);
     return this.tiles.get(url);
   }
 }

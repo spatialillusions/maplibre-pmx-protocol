@@ -12,7 +12,7 @@ class EtagMismatch extends Error {
   }
 }
 
-export class TilePackage {
+export class PMX {
   constructor(source, options) {
     // Default coverageCheck enabled; disable with coverageCheck:false
     this.coverageCheck = 1;
@@ -41,7 +41,7 @@ export class TilePackage {
   async getFilelist() {
     return await this.cache.getFilelist(this.source);
   }
-
+  /*
   async getMetadataAttempt() {
     const header = await this.cache.getFilelist(this.source);
     let metadata = {};
@@ -70,14 +70,14 @@ export class TilePackage {
       throw e;
     }
   }
-
+  //*/
   async getResourceAttempt(file, signal) {
-    const header = await this.cache.getFilelist(this.source);
-    if (!header.files[file]) return undefined;
+    const filelist = await this.cache.getFilelist(this.source);
+    if (!filelist[file]) return undefined;
     const resource = await this.cache.getResource(
       this.source,
       file,
-      header,
+      filelist,
       signal,
     );
     return {
@@ -102,74 +102,18 @@ export class TilePackage {
   async getStylesAttempt() {
     const filelist = await this.cache.getFilelist(this.source);
     const sourceKey = this.source.getKey();
-    /*
-    if (header.packageType === "vtpk") {
-      const metadata = await getJsonFromFile(
-        "p12/root.json",
-        header.files,
-        this.source,
-      );
-      const styles = await getJsonFromFile(
-        "p12/resources/styles/root.json",
-        header.files,
-        this.source,
-      );
-      if (styles.sources && styles.sources.esri) {
-        delete styles.sources.esri.url;
-        styles.sources.esri.tiles = [`tilepackage://${sourceKey}/{z}/{x}/{y}`];
-        styles.sources.esri.type = styles.sources.esri.type || "vector";
-        styles.sources.esri.minzoom = header.minZoom || 0;
-        styles.sources.esri.maxzoom = header.maxZoom || 22;
-      }
-      for (const k in styles.sources) {
-        const src = styles.sources[k];
-        if (
-          src &&
-          typeof src.url === "string" &&
-          src.url.startsWith("tilepackage://")
-        ) {
-          delete src.url;
-          if (!src.tiles)
-            src.tiles = [`tilepackage://${sourceKey}/{z}/{x}/{y}`];
-        }
-      }
-      if (metadata.copyrightText)
-        style.sources.esri.attribution = metadata.copyrightText;
-      style.glyphs = `tilepackage://${sourceKey}/{fontstack}/{range}`;
-      style.sprite = `tilepackage://${sourceKey}/sprite`;
-      if (this.debug)
-        console.debug(
-          "[tilepackage style] rewritten esri source",
-          style.sources.esri,
-        );
-      return style;
-    }
-    return {
-      version: 8,
-      sources: {
-        esri: {
-          type: "raster",
-          tileSize: header.tileSize || 256,
-          tiles: [`tilepackage://${sourceKey}/{z}/{x}/{y}`],
-          maxzoom: header.maxZoom || 22,
-          minzoom: header.minZoom || 0,
-        },
-      },
-      layers: [{ id: "tilepackageraster", type: "raster", source: "esri" }],
-    };
-    */
+
     const styles = [];
     for (const file in filelist) {
       if (file.startsWith("styles/") && file.endsWith(".json")) {
         try {
           const style = await getJsonFromFile(file, filelist, this.source);
-          // TODO Rewrite any tilepackage:// URLs in the style
+          // TODO Rewrite any URLs in the style
+          style.glyphs = `pmx://${sourceKey}/fonts/{fontstack}/{range}.pbf`;
+          style.sprite = `pmx://${sourceKey}/sprites/sprites`;
           styles.push(style);
         } catch (e) {
-          console.warn(
-            `[tilepackage style] failed to load style file ${file}:`,
-            e,
-          );
+          console.warn(`[pmx style] failed to load style file ${file}:`, e);
         }
       }
     }
@@ -187,7 +131,7 @@ export class TilePackage {
       throw e;
     }
   }
-
+  /*
   async getTileJson(baseTilesUrl) {
     const header = await this.getFilelist();
     const metadata = await this.getMetadata();
@@ -207,4 +151,5 @@ export class TilePackage {
     if (header.maxZoom) tileJson.maxzoom = header.maxZoom;
     return tileJson;
   }
+  //*/
 }

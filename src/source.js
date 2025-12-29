@@ -143,36 +143,6 @@ export class FetchSource extends Source {
         "Server returned no content-length header or content-length exceeding request. Check that your storage backend supports HTTP Byte Serving.",
       );
     }
-    //const requestHeaders = new Headers(this.customHeaders);
-    //requestHeaders.set("method", "HEAD");
-
-    /*
-    let controller;
-    let signal;
-    if (passedSignal) {
-      signal = passedSignal;
-    } else {
-      controller = new AbortController();
-      signal = controller.signal;
-    }
-    */
-    /*
-    try {
-      const response = await fetch(this.url, { method: "HEAD" });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const contentLength = response.headers.get("content-length");
-      if (contentLength) {
-        console.log(contentLength);
-        this.size = contentLength;
-        return contentLength;
-      } else {
-        console.error("Content-Length header is not available.");
-      }
-    } catch (error) {
-      console.error("Error fetching headers:", error);
-    }*/
   }
 
   setHeaders(customHeaders) {

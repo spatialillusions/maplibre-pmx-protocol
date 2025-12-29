@@ -36,7 +36,7 @@ export default [
     output: {
       file: "dist/bundle.js",
       format: "iife",
-      name: "TilePackageProtocol",
+      name: "pmxProtocol",
       sourcemap: true,
     },
     plugins: [nodeResolve({ browser: true }), commonjs()],

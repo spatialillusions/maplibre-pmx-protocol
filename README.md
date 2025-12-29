@@ -1,4 +1,4 @@
-# maplibre-tilepackage-protocol
+# maplibre-pmx-protocol
 
 Custom MapLibre GL JS protocol for reading Esri `TPKX` (raster) and `VTPK` (vector) TilePackage archives.
 
