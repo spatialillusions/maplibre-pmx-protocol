@@ -204,7 +204,7 @@
     }
     // Auto-load demo pmx when served via http/https (not file://)
     if (location.protocol !== "file:") {
-      const demoName = "os-zoomstack.pmx"; // present in example folder
+      const demoName = "oslo-small.pmx"; // present in example folder
       // Use relative path so it works regardless of host/port
       const demoUrl = demoName; // same directory as index.html
       console.log("Attempting auto-load of demo package:", demoUrl);
