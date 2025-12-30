@@ -68,6 +68,7 @@ export default async function getFilelistFromPMX(source) {
         file comment (variable size)
     */
     let sizeFile = v.getUint32(entryStart + 20, true);
+    const compressedSize = v.getUint32(entryStart + 24, true);
 
     const sizeFileName = v.getUint16(entryStart + 28, true);
 
@@ -85,40 +86,85 @@ export default async function getFilelistFromPMX(source) {
     const decoder = new TextDecoder("utf-8");
     const filename = decoder.decode(vFilename);
 
-    if (
-      (sizeFile == 0xffffffff || relativeOffset == 0xffffffff) &&
-      sizeExtraField > 0
-    ) {
+    const hasZip64Marker =
+      sizeFile == 0xffffffff || relativeOffset == 0xffffffff;
+
+    let localExtraFieldZip64Length = 0;
+
+    // Determine if local header will have ZIP64 extra field
+    // Local header only includes ZIP64 if compressed/uncompressed sizes overflow
+    const localNeedsZip64 =
+      compressedSize === 0xffffffff || sizeFile === 0xffffffff;
+
+    if (hasZip64Marker && sizeExtraField > 0) {
       const vExtended = new DataView(
         centralDirectory.data,
         entryStart + 46 + sizeFileName,
-        32,
+        sizeExtraField,
       );
-      if (vExtended.getUint16(0, true) == 0x0001) {
-        /*
-        Value      Size       Description
-        -----      ----       -----------
-(ZIP64) 0x0001     2 bytes    Tag for this "extra" block type
-        Size       2 bytes    Size of this "extra" block
-        Original 
-        Size       8 bytes    Original uncompressed file size
-        Compressed
-        Size       8 bytes    Size of compressed data
-        Relative Header
-        Offset     8 bytes    Offset of local header record
-        Disk Start
-        Number     4 bytes    Number of the disk on which
-                              this file starts
-      */
 
-        let j = 0;
-        if (sizeFile == 0xffffffff) {
-          sizeFile = Number(vExtended.getBigUint64(4, true));
-          j += 8;
+      // Parse extra field to find ZIP64 block
+      let extraOffset = 0;
+      while (extraOffset + 4 <= sizeExtraField) {
+        const headerId = vExtended.getUint16(extraOffset, true);
+        const dataSize = vExtended.getUint16(extraOffset + 2, true);
+
+        if (headerId === 0x0001) {
+          // ZIP64 block found in central directory
+          // Calculate what will be in local header (only size fields, not offset)
+
+          let localZip64DataSize = 0;
+
+          // Local header ZIP64 includes uncompressed size if it overflows
+          if (sizeFile === 0xffffffff) {
+            localZip64DataSize += 8;
+          }
+
+          // Local header ZIP64 includes compressed size if it overflows
+          if (compressedSize === 0xffffffff) {
+            localZip64DataSize += 8;
+          }
+
+          // Only set length if local header actually needs ZIP64
+          if (localZip64DataSize > 0) {
+            localExtraFieldZip64Length = 4 + localZip64DataSize; // 4 bytes header + data
+          }
+
+          /*
+          Central Directory ZIP64 Extra Field:
+          Value      Size       Description
+          -----      ----       -----------
+  (ZIP64) 0x0001     2 bytes    Tag for this "extra" block type
+          Size       2 bytes    Size of this "extra" block
+          Original 
+          Size       8 bytes    Original uncompressed file size (if uncompressed size = 0xFFFFFFFF)
+          Compressed
+          Size       8 bytes    Size of compressed data (if compressed size = 0xFFFFFFFF)
+          Relative Header
+          Offset     8 bytes    Offset of local header record (if offset = 0xFFFFFFFF in central dir)
+          Disk Start
+          Number     4 bytes    Number of the disk on which this file starts (if disk start = 0xFFFF)
+          
+          Local Header ZIP64 Extra Field only includes:
+          - Original Size (if 0xFFFFFFFF in local header)
+          - Compressed Size (if 0xFFFFFFFF in local header)
+          NO offset or disk number in local header extra field!
+          */
+
+          let j = 0;
+          if (sizeFile == 0xffffffff) {
+            sizeFile = Number(vExtended.getBigUint64(extraOffset + 4, true));
+            j += 8;
+          }
+          if (relativeOffset == 0xffffffff) {
+            relativeOffset = Number(
+              vExtended.getBigUint64(extraOffset + 4 + j, true),
+            );
+          }
+          break;
         }
-        if (relativeOffset == 0xffffffff) {
-          relativeOffset = Number(vExtended.getBigUint64(4 + j, true));
-        }
+
+        extraOffset += 4 + dataSize;
       }
     }
 
@@ -126,7 +172,8 @@ export default async function getFilelistFromPMX(source) {
       filename: filename,
       size: sizeFile,
       relativeOffset: relativeOffset,
-      absoluteOffset: relativeOffset + 30 + filename.length,
+      absoluteOffset:
+        relativeOffset + 30 + filename.length + localExtraFieldZip64Length,
     };
     entryStart += 46 + sizeFileName + sizeExtraField + sizeComment;
   }
