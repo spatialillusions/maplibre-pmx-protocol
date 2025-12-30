@@ -109,15 +109,23 @@ export class PMX {
         try {
           const style = await getJsonFromFile(file, filelist, this.source);
           // TODO Rewrite any URLs in the style
+          /*
           style.sources = {
             composite: {
               type: "vector",
               url: `pmx://${sourceKey}/data/OS_Open_Zoomstack.pmtiles/tiles.json`,
             },
           };
-
-          style.glyphs = `pmx://${sourceKey}/fonts/{fontstack}/{range}.pbf`;
-          style.sprite = `pmx://${sourceKey}/sprites/sprites`;
+          */
+          for (const source in style.sources) {
+            style.sources[
+              source
+            ].url = `pmx://${sourceKey}${style.sources[source].url}`;
+          }
+          if (style.glyphs) style.glyphs = `pmx://${sourceKey}${style.glyphs}`;
+          console.log("updated style glyphs to:", style.glyphs);
+          if (style.sprite) style.sprite = `pmx://${sourceKey}${style.sprite}`;
+          console.log("updated style sprite to:", style.sprite);
           styles.push(style);
         } catch (e) {
           console.warn(`[pmx style] failed to load style file ${file}:`, e);

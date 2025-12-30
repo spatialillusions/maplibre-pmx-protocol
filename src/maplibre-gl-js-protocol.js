@@ -62,11 +62,14 @@ export class Protocol {
 
       if (!result) {
         const file = params.url.substr(params.url.indexOf(".pmx") + 5);
-        //console.log("PMX non-tile file request:", file, params.type);
-        if (params.type === "json" && params.url.endsWith("tiles.json")) {
-          // This is probably a file json request
+        if (
+          params.type === "json" &&
+          (params.url.endsWith("tiles.json") ||
+            params.url.endsWith("tilejson.json"))
+        ) {
+          // This is probably a tile json request
           const pmtiles = await instance.getPmtilesInstance(
-            file.replace("/tiles.json", ""),
+            file.replace("/tiles.json", "").replace("/tilejson.json", ""),
           );
           const h = await pmtiles.getHeader();
           abortController.signal.throwIfAborted();
