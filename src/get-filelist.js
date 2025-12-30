@@ -156,6 +156,10 @@ export default async function getFilelistFromPMX(source) {
             sizeFile = Number(vExtended.getBigUint64(extraOffset + 4, true));
             j += 8;
           }
+          if (compressedSize == 0xffffffff) {
+            // Skip compressed size field (we don't need to read it, but need to account for it)
+            j += 8;
+          }
           if (relativeOffset == 0xffffffff) {
             relativeOffset = Number(
               vExtended.getBigUint64(extraOffset + 4 + j, true),
@@ -168,6 +172,41 @@ export default async function getFilelistFromPMX(source) {
       }
     }
 
+    // Verify calculation by reading actual local header when ZIP64 is expected
+    /*
+    if (localExtraFieldZip64Length > 0) {
+      console.log(
+        `PMX file entry: ${filename}
+       - uncompressed size: ${sizeFile} ${
+          sizeFile === 0xffffffff ? "(marker)" : ""
+        }
+       - compressed size: ${compressedSize} ${
+          compressedSize === 0xffffffff ? "(marker)" : ""
+        }
+       - relative offset: ${relativeOffset}
+       - local needs ZIP64: ${localNeedsZip64}
+       - central dir extra field size: ${sizeExtraField}
+       - calculated local ZIP64 extra: ${localExtraFieldZip64Length}`,
+      );
+
+      const localHeaderResp = await source.getBytes(relativeOffset + 26, 4);
+      const localHeaderView = new DataView(localHeaderResp.data);
+      const localFilenameLength = localHeaderView.getUint16(0, true);
+      const actualLocalExtraLength = localHeaderView.getUint16(2, true);
+
+      if (actualLocalExtraLength !== localExtraFieldZip64Length) {
+        console.warn(
+          `ZIP64 extra length mismatch for ${filename}: calculated ${localExtraFieldZip64Length} vs actual ${actualLocalExtraLength}`,
+        );
+      } else {
+        console.log(`✓ ZIP64 extra length verified: ${actualLocalExtraLength}`);
+      }
+      if (filename === "data/protomaps.pmtiles") {
+        console.log("BREAKPOINT");
+      }
+      localExtraFieldZip64Length = actualLocalExtraLength;
+    }
+    //*/
     pmxFiles[filename] = {
       filename: filename,
       size: sizeFile,
