@@ -1,6 +1,6 @@
 # MapBundle Format Specification
 
-MapBundle (PMTiles Extended) is a single-file archive format for tiled data and resources needed to visualize the data. The contents of a MapBundle archive can be read directly from a web server without having to download the whole archive.
+MapBundle is a single-file archive format for tiled data and resources needed to visualize the data. The contents of a MapBundle archive can be read directly from a web server without having to download the whole archive.
 
 ## Format Version
 
