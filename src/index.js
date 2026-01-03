@@ -133,9 +133,21 @@ export class MapBundle {
           const style = await getJsonFromZip(file, filelist, this.source);
           // Update style URLs to use mapbundle:// protocol
           for (const source in style.sources) {
-            style.sources[
-              source
-            ].url = `mapbundle://${sourceKey}${style.sources[source].url}`;
+            // Update source URLs
+            if (style.sources[source].url) {
+              style.sources[
+                source
+              ].url = `mapbundle://${sourceKey}${style.sources[source].url}`;
+            }
+            // If it is a geojson source with 'data' property, update that too
+            if (
+              style.sources[source].data &&
+              typeof style.sources[source].data === "string"
+            ) {
+              style.sources[
+                source
+              ].data = `mapbundle://${sourceKey}${style.sources[source].data}`;
+            }
           }
           if (style.glyphs)
             style.glyphs = `mapbundle://${sourceKey}${style.glyphs}`;
