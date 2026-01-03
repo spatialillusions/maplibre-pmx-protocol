@@ -85,6 +85,26 @@ All resource URLs in style JSON files MUST be stored as absolute paths within th
 
 The `mapbundle://` protocol scheme will be added automatically by the MapBundle reader. Storing paths this way makes extracted MapBundle contents compatible with standard tile servers (Maplibre Martin, tileserver-gl-js, etc.).
 
+**External Resources:**
+
+URLs that do not start with `/` will not be modified by the MapBundle reader, allowing you to reference external resources. This is useful for linking to online tile sources, fonts, or other resources hosted outside the MapBundle:
+
+```json
+{
+  "sources": {
+    "local-data": {
+      "type": "vector",
+      "url": "/data/tiles.pmtiles"
+    },
+    "external-tiles": {
+      "type": "raster",
+      "url": "https://example.com/tiles/{z}/{x}/{y}.png",
+      "tileSize": 256
+    }
+  }
+}
+```
+
 ## Example Structure
 
 A typical MapBundle archive structure:
