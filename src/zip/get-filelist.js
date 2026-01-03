@@ -1,12 +1,10 @@
-import getJsonFromZip from "./get-json-from-file.js";
-
 /**
  * Retrieve the file list of a mapbundle file
  *
  * @param {Source} source - The source of the mapbundle file.
  */
 export default async function getFilelistFromMapBundle(source) {
-  const key = source.getKey();
+  //const key = source.getKey();
   const fileSize = await source.getSize();
   const resp = await source.getBytes(fileSize - 98, 98);
   let v = new DataView(resp.data, 0, 98);
@@ -91,8 +89,9 @@ export default async function getFilelistFromMapBundle(source) {
 
     // Determine if local header will have ZIP64 extra field
     // Local header only includes ZIP64 if compressed/uncompressed sizes overflow
-    const localNeedsZip64 =
+    /*const localNeedsZip64 =
       compressedSize === 0xffffffff || sizeFile === 0xffffffff;
+    */
 
     if (hasZip64Marker && sizeExtraField > 0) {
       const vExtended = new DataView(
@@ -180,6 +179,6 @@ export default async function getFilelistFromMapBundle(source) {
     entryStart += 46 + sizeFileName + sizeExtraField + sizeComment;
   }
 
-  let root = {};
+  //let root = {};
   return mapbundleFiles;
 }
