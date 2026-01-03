@@ -139,9 +139,15 @@ To create a MapBundle file, use any ZIP utility with compression disabled:
 # Using zip command (Unix/Linux/macOS)
 zip -0 -r my-map.mapbundle styles/ data/ fonts/ sprites/
 
-# Using PowerShell (Windows)
+# Using 7-Zip (Windows/Unix/Linux/macOS) - Recommended for large files
+7z a -tzip -mx0 my-map.mapbundle styles/ data/ fonts/ sprites/
+
+# Using PowerShell (Windows) - Not recommended for large files
+# Note: Compress-Archive does not support ZIP64 and will fail with files larger than 2GB
 Compress-Archive -Path styles/,data/,fonts/,sprites/ -DestinationPath my-map.mapbundle -CompressionLevel NoCompression
 ```
+
+**Note:** For MapBundle files larger than 2GB, use `zip` or `7-Zip` instead of PowerShell's `Compress-Archive`, as it does not support the ZIP64 extensions required for large archives.
 
 ## Compatibility
 
