@@ -45,6 +45,7 @@ Vector data can be stored as GeoJSON files (e.g., `/data/boundaries.geojson`) wi
 ### Location and Naming
 
 Style JSON files:
+
 - SHALL be stored in the `/styles/` folder
 - SHOULD use descriptive filenames (e.g., `light.json`, `dark.json`, `satellite.json`)
 - Multiple style files are supported in a single MapBundle archive
@@ -63,9 +64,9 @@ Each style JSON SHOULD include a `name` property for display purposes:
 
 ### URLs in Style JSON
 
-All resource URLs in style JSON files MUST be stored as absolute paths within the MapBundle archive (starting with `/`).
+All resource URLs that reference data within the MapBundle archive MUST be stored as absolute paths starting with `/`. URLs that do not start with `/` are assumed to reference external resources and will not be modified by the MapBundle reader.
 
-**Required format:**
+**Internal MapBundle Resources:**
 ```json
 {
   "glyphs": "/fonts/{fontstack}/{range}.pbf",
@@ -83,11 +84,11 @@ All resource URLs in style JSON files MUST be stored as absolute paths within th
 }
 ```
 
-The `mapbundle://` protocol scheme will be added automatically by the MapBundle reader. Storing paths this way makes extracted MapBundle contents compatible with standard tile servers (Maplibre Martin, tileserver-gl-js, etc.).
+The `mapbundle://` protocol scheme will be added automatically by the MapBundle reader for paths starting with `/`. Storing paths this way makes extracted MapBundle contents compatible with standard tile servers (Maplibre Martin, tileserver-gl-js, etc.).
 
 **External Resources:**
 
-URLs that do not start with `/` will not be modified by the MapBundle reader, allowing you to reference external resources. This is useful for linking to online tile sources, fonts, or other resources hosted outside the MapBundle:
+URLs that do not start with `/` (such as `http://`, `https://`, or other protocol schemes) are assumed to reference external resources and will not be modified by the MapBundle reader. This allows you to mix local MapBundle resources with external tile sources, fonts, or other resources hosted outside the MapBundle:
 
 ```json
 {
@@ -151,7 +152,14 @@ Compress-Archive -Path styles/,data/,fonts/,sprites/ -DestinationPath my-map.map
 
 ## Compatibility
 
-MapBundle archives are designed to work with:
-- MapLibre GL JS via the `maplibre-mapbundle-protocol` library
-- Standard tile servers when extracted (Martin, tileserver-gl-js)
-- Any HTTP server supporting range requests for remote access
+### MapLibre GL JS
+
+MapBundle archives can be read locally or remotely from any HTTP server that supports range requests using the `maplibre-mapbundle-protocol` library. This enables efficient access to MapBundle contents without downloading the entire archive.
+
+### Other Mapping Engines
+
+Other mapping engines that support raster or vector tiles can support MapBundles if protocols for them are created, similar to the `maplibre-mapbundle-protocol`.
+
+### Extracted Contents
+
+The contents of a MapBundle can be easily extracted and used with standard tile servers such as MapLibre Martin, or tileserver-gl-js.
